@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use anyhow::Result;
 
-use super::{FileEntry, Inspector, LayerInfo};
+use super::{FileEntry, ImageInfo, Inspector, LayerInfo};
 
 /// Reads layers directly from overlay2 storage on disk.
 /// Fastest path — no decompression, but requires root.
@@ -17,7 +17,7 @@ impl Overlay2Inspector {
 }
 
 impl Inspector for Overlay2Inspector {
-    fn list_layers(&mut self, _image: &str) -> Result<Vec<LayerInfo>> {
+    fn inspect(&mut self, _image: &str) -> Result<ImageInfo> {
         // TODO: read image manifest from storage_root, resolve layer chain
         let _ = &self.storage_root;
         anyhow::bail!("overlay2 inspector not yet implemented")

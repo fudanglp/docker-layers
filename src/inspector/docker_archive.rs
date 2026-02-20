@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use anyhow::Result;
 
-use super::{FileEntry, Inspector, LayerInfo};
+use super::{FileEntry, ImageInfo, Inspector, LayerInfo};
 
 /// Reads layers from a `docker save` tar archive.
 /// Cross-platform, no daemon needed, but requires decompression.
@@ -17,7 +17,7 @@ impl DockerArchiveInspector {
 }
 
 impl Inspector for DockerArchiveInspector {
-    fn list_layers(&mut self, _image: &str) -> Result<Vec<LayerInfo>> {
+    fn inspect(&mut self, _image: &str) -> Result<ImageInfo> {
         // TODO: read manifest.json from tar, enumerate layer dirs
         let _ = &self.archive_path;
         anyhow::bail!("docker archive inspector not yet implemented")

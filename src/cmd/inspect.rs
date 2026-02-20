@@ -51,12 +51,18 @@ pub fn run(image: &str, use_oci: bool, json: bool, runtime: Option<String>) -> R
         }
     };
 
-    let layers = inspector.list_layers(image)?;
+    let info = inspector.inspect(image)?;
 
     if cfg.json {
-        println!("{}", serde_json::to_string_pretty(&layers)?);
+        println!("{}", serde_json::to_string_pretty(&info)?);
     } else {
-        for layer in &layers {
+        println!("{}", info.name);
+        if let Some(arch) = &info.architecture {
+            println!("  arch: {arch}");
+        }
+        println!("  total size: {} bytes", info.total_size);
+        println!();
+        for layer in &info.layers {
             println!("{}", layer.digest);
             if let Some(cmd) = &layer.created_by {
                 println!("  {cmd}");

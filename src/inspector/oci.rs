@@ -1,6 +1,6 @@
 use anyhow::Result;
 
-use super::{FileEntry, Inspector, LayerInfo};
+use super::{FileEntry, ImageInfo, Inspector, LayerInfo};
 
 /// Reads layers via the OCI image layout or container runtime API.
 /// Cross-platform, no root needed, but slower (requires API calls).
@@ -15,7 +15,7 @@ impl OciInspector {
 }
 
 impl Inspector for OciInspector {
-    fn list_layers(&mut self, _image: &str) -> Result<Vec<LayerInfo>> {
+    fn inspect(&mut self, _image: &str) -> Result<ImageInfo> {
         // TODO: use runtime CLI (docker/podman) to inspect image and list layers
         let _ = &self.runtime_cmd;
         anyhow::bail!("OCI inspector not yet implemented")
