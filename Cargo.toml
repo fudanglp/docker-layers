@@ -1,7 +1,12 @@
 [package]
-name = "docker-layers"
+name = "peel"
 version = "0.1.0"
 edition = "2024"
+description = "A container image layer inspection tool"
+
+[[bin]]
+name = "peel"
+path = "src/main.rs"
 
 [dependencies]
 anyhow = "1.0.102"

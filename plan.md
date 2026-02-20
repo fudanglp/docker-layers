@@ -1,4 +1,4 @@
-# docker-layers — Plan
+# peel — Plan
 
 ## Goal
 
@@ -8,6 +8,7 @@ A Rust CLI tool for inspecting container image layers. It provides:
 - Layer metadata (created_by command, timestamps, digest)
 - JSON export for programmatic consumption
 - Interactive TUI for browsing layers (via ratatui)
+- Cross-platform support (Linux, macOS, Windows)
 
 The tool auto-detects which container runtime is installed and reads layers
 from the most efficient source available (local storage preferred over tar).
@@ -17,29 +18,40 @@ from the most efficient source available (local storage preferred over tar).
 ## Project Structure
 
 ```
-docker-layers/
+peel/
 ├── Cargo.toml
 ├── plan.md
 └── src/
     ├── main.rs                  # Entry point, clap CLI setup, tokio runtime
-    ├── probe/                   # Probing & config layer
-    │   ├── mod.rs               # Re-exports, RuntimeConfig enum
-    │   ├── detect.rs            # Auto-detect installed runtimes
-    │   └── config.rs            # Runtime-specific path resolution
+    ├── probe/                   # Probing & config layer (platform-aware)
+    │   ├── mod.rs               # Trait + platform dispatch via #[cfg]
+    │   ├── common.rs            # Shared: which(), daemon ping, binary detect
+    │   ├── linux.rs             # Linux: overlay2 direct, systemd, storage paths
+    │   ├── macos.rs             # macOS: Docker Desktop VM, API-based
+    │   └── windows.rs           # Windows: WSL2, Docker Desktop
     ├── source/                  # Layer data sources (read abstraction)
     │   ├── mod.rs               # Source trait definition
-    │   ├── overlay2.rs          # Read from /var/lib/docker/overlay2
-    │   ├── oci.rs               # Read from OCI image layout (tar or dir)
-    │   └── docker_archive.rs    # Read from `docker save` tar
-    ├── model/                   # Core data types
+    │   ├── overlay2.rs          # Linux only (#[cfg(target_os = "linux")])
+    │   ├── oci.rs               # Cross-platform: OCI image layout
+    │   └── docker_archive.rs    # Cross-platform: `docker save` tar
+    ├── model/                   # Core data types (fully cross-platform)
     │   ├── mod.rs
     │   ├── image.rs             # ImageInfo, LayerInfo, FileEntry
     │   └── output.rs            # Serializable output types (JSON)
-    └── ui/                      # Presentation
+    └── ui/                      # Presentation (fully cross-platform)
         ├── mod.rs
         ├── cli.rs               # Plain text / table output
         └── tui.rs               # Interactive ratatui browser
 ```
+
+### Cross-Platform Strategy
+
+Platform-specific code uses Rust's `#[cfg(target_os = "...")]` to select
+the right module at compile time. Each platform gets its own file with a
+shared trait, keeping platform logic isolated.
+
+Only `probe/` and `source/overlay2` need platform-specific code.
+Everything else (model, UI, OCI/tar parsing) is cross-platform.
 
 ---
 

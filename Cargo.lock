@@ -490,23 +490,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "docker-layers"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "clap",
- "crossterm",
- "flate2",
- "indicatif",
- "oci-spec",
- "ratatui",
- "serde",
- "serde_json",
- "tar",
- "tokio",
-]
-
-[[package]]
 name = "document-features"
 version = "0.2.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1060,6 +1043,23 @@ dependencies = [
  "redox_syscall 0.5.18",
  "smallvec",
  "windows-link",
+]
+
+[[package]]
+name = "peel"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "crossterm",
+ "flate2",
+ "indicatif",
+ "oci-spec",
+ "ratatui",
+ "serde",
+ "serde_json",
+ "tar",
+ "tokio",
 ]
 
 [[package]]
