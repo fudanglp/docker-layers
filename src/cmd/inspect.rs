@@ -1,15 +1,16 @@
+use std::fs;
 use std::io::{self, Write};
 use std::path::Path;
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use crossterm::style::{self, Stylize};
 
 use crate::config;
 use crate::inspector::{self, Inspector};
 use crate::probe::{RuntimeInfo, StorageDriver};
 
-pub fn run(image: &str, use_oci: bool, json: bool, runtime: Option<String>) -> Result<()> {
-    config::init_from_cli(json, runtime)?;
+pub fn run(image: &str, use_oci: bool, json: Option<&str>, runtime: Option<String>) -> Result<()> {
+    config::init_from_cli(json.is_some(), runtime)?;
     let cfg = config::get();
 
     // If the image looks like a tar file, use the archive inspector directly
@@ -58,8 +59,15 @@ pub fn run(image: &str, use_oci: bool, json: bool, runtime: Option<String>) -> R
         layer.files = inspector.list_files(layer)?;
     }
 
-    if cfg.json {
-        println!("{}", serde_json::to_string_pretty(&info)?);
+    if let Some(dest) = json {
+        let output = serde_json::to_string_pretty(&info)?;
+        if dest == "-" {
+            println!("{output}");
+        } else {
+            fs::write(dest, &output)
+                .with_context(|| format!("Failed to write JSON to {dest}"))?;
+            eprintln!("Wrote {dest}");
+        }
     } else {
         println!("{}", info.name);
         if let Some(arch) = &info.architecture {

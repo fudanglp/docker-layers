@@ -15,9 +15,9 @@ struct Cli {
     #[arg(long, global = true)]
     runtime: Option<String>,
 
-    /// Output as JSON
-    #[arg(long, global = true)]
-    json: bool,
+    /// Output as JSON (optionally to a file)
+    #[arg(long, global = true, num_args = 0..=1, default_missing_value = "-")]
+    json: Option<String>,
 
     /// Use OCI/Docker API instead of direct storage access (no root needed, slower)
     #[arg(long, global = true)]
@@ -58,9 +58,9 @@ fn main() -> Result<()> {
     }
 
     if let Some(image) = &image_to_inspect {
-        cmd::inspect::run(image, cli.use_oci, cli.json, cli.runtime)?;
+        cmd::inspect::run(image, cli.use_oci, cli.json.as_deref(), cli.runtime)?;
     } else if matches!(cli.command, Some(Commands::Probe)) {
-        cmd::probe::run(cli.json, cli.runtime)?;
+        cmd::probe::run(cli.json.is_some(), cli.runtime)?;
     }
 
     Ok(())
