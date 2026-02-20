@@ -27,7 +27,10 @@ struct Cli {
     use_oci: bool,
 
     #[command(subcommand)]
-    command: Commands,
+    command: Option<Commands>,
+
+    /// Image name or path to a tar archive (shorthand for `peel inspect <image>`)
+    image: Option<String>,
 }
 
 #[derive(Subcommand)]
@@ -103,60 +106,69 @@ fn main() -> Result<()> {
         runtime_override: cli.runtime,
     });
 
-    match &cli.command {
-        Commands::Inspect { image } => {
-            let cfg = config::get();
+    // Resolve: `peel <image>` is shorthand for `peel inspect <image>`
+    let image_to_inspect = match &cli.command {
+        Some(Commands::Inspect { image }) => Some(image.clone()),
+        Some(_) => None,
+        None => cli.image.clone(),
+    };
 
-            // Check if we need root for direct storage access
-            if !cli.use_oci {
-                if let Some(idx) = cfg.probe.default {
-                    let rt = &cfg.probe.runtimes[idx];
-                    if !rt.can_read {
-                        maybe_escalate(rt)?;
-                    }
+    if cli.command.is_none() && image_to_inspect.is_none() {
+        Cli::parse_from(["peel", "--help"]);
+        unreachable!()
+    }
+
+    if let Some(image) = &image_to_inspect {
+        let cfg = config::get();
+
+        // Check if we need root for direct storage access
+        if !cli.use_oci {
+            if let Some(idx) = cfg.probe.default {
+                let rt = &cfg.probe.runtimes[idx];
+                if !rt.can_read {
+                    maybe_escalate(rt)?;
                 }
-            }
-
-            if cfg.json {
-                println!("{{\"image\": \"{image}\", \"layers\": []}}");
-            } else {
-                println!("Inspecting image: {image}");
-                println!("(not yet implemented)");
             }
         }
-        Commands::Probe => {
-            let cfg = config::get();
 
-            if cfg.json {
-                println!("{}", serde_json::to_string_pretty(&cfg.probe)?);
-            } else if cfg.probe.runtimes.is_empty() {
-                println!("No container runtimes detected.");
-            } else {
-                println!("Detected container runtimes:\n");
-                for (i, rt) in cfg.probe.runtimes.iter().enumerate() {
-                    let marker = if cfg.probe.default == Some(i) {
-                        " (default)"
+        if cfg.json {
+            println!("{{\"image\": \"{image}\", \"layers\": []}}");
+        } else {
+            println!("Inspecting image: {image}");
+            println!("(not yet implemented)");
+        }
+    } else if matches!(cli.command, Some(Commands::Probe)) {
+        let cfg = config::get();
+
+        if cfg.json {
+            println!("{}", serde_json::to_string_pretty(&cfg.probe)?);
+        } else if cfg.probe.runtimes.is_empty() {
+            println!("No container runtimes detected.");
+        } else {
+            println!("Detected container runtimes:\n");
+            for (i, rt) in cfg.probe.runtimes.iter().enumerate() {
+                let marker = if cfg.probe.default == Some(i) {
+                    " (default)"
+                } else {
+                    ""
+                };
+                println!("  {}{}", rt.kind, marker);
+                println!("    Binary:           {}", rt.binary_path.display());
+                println!("    Storage root:     {}", rt.storage_root.display());
+                println!("    Storage driver:   {}", rt.storage_driver);
+                println!(
+                    "    Daemon running:   {}",
+                    if rt.is_running { "yes" } else { "no" }
+                );
+                println!(
+                    "    Storage readable: {}",
+                    if rt.can_read {
+                        "yes"
                     } else {
-                        ""
-                    };
-                    println!("  {}{}", rt.kind, marker);
-                    println!("    Binary:           {}", rt.binary_path.display());
-                    println!("    Storage root:     {}", rt.storage_root.display());
-                    println!("    Storage driver:   {}", rt.storage_driver);
-                    println!(
-                        "    Daemon running:   {}",
-                        if rt.is_running { "yes" } else { "no" }
-                    );
-                    println!(
-                        "    Storage readable: {}",
-                        if rt.can_read {
-                            "yes"
-                        } else {
-                            "no (run as root)"
-                        }
-                    );
-                    println!();
-                }
+                        "no (run as root)"
+                    }
+                );
+                println!();
             }
         }
     }
