@@ -1,27 +1,45 @@
+import { useState, useMemo } from "react";
 import { Container, Cpu } from "lucide-react";
 import data from "../data/test.json";
-import type { ImageInfo } from "@/types";
+import type { ImageInfo, FileEntry } from "@/types";
 import { formatBytes } from "@/lib/format";
-import { LayerCard } from "@/components/LayerCard";
+import { LayerList } from "@/components/LayerList";
+import { FilePanel } from "@/components/FilePanel";
+import { Toolbar, type ViewMode, type FileViewMode } from "@/components/Toolbar";
 
 const image = data as ImageInfo;
 
 function App() {
+  const [selectedLayer, setSelectedLayer] = useState(0);
+  const [viewMode, setViewMode] = useState<ViewMode>("layer");
+  const [fileViewMode, setFileViewMode] = useState<FileViewMode>("tree");
+  const [filter, setFilter] = useState("");
+
+  const files = useMemo<FileEntry[]>(() => {
+    if (viewMode === "layer") {
+      return image.layers[selectedLayer].files;
+    }
+    // Accumulated: all files from layer 0 through selected
+    const all: FileEntry[] = [];
+    for (let i = 0; i <= selectedLayer; i++) {
+      all.push(...image.layers[i].files);
+    }
+    return all;
+  }, [selectedLayer, viewMode]);
+
   return (
-    <div className="min-h-screen bg-background">
-      <div className="max-w-4xl mx-auto py-8 px-4 space-y-6">
-        {/* Header */}
-        <div className="space-y-1">
-          <div className="flex items-center gap-3">
-            <Container className="size-6 text-primary" />
-            <h1 className="text-2xl font-bold tracking-tight">
-              {image.name}
-              {image.tag && (
-                <span className="text-muted-foreground font-normal">:{image.tag}</span>
-              )}
-            </h1>
-          </div>
-          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+    <div className="h-screen flex flex-col bg-background">
+      {/* Header */}
+      <div className="border-b px-4 py-3 shrink-0">
+        <div className="flex items-center gap-3">
+          <Container className="size-5 text-primary" />
+          <h1 className="text-lg font-bold tracking-tight">
+            {image.name}
+            {image.tag && (
+              <span className="text-muted-foreground font-normal">:{image.tag}</span>
+            )}
+          </h1>
+          <div className="flex items-center gap-3 text-sm text-muted-foreground ml-2">
             {image.architecture && (
               <span className="flex items-center gap-1">
                 <Cpu className="size-3.5" />
@@ -32,12 +50,37 @@ function App() {
             <span>{image.layers.length} layers</span>
           </div>
         </div>
+      </div>
 
-        {/* Layers */}
-        <div className="space-y-2">
-          {image.layers.map((layer, i) => (
-            <LayerCard key={layer.digest} layer={layer} index={i} />
-          ))}
+      {/* Toolbar */}
+      <Toolbar
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
+        fileViewMode={fileViewMode}
+        onFileViewModeChange={setFileViewMode}
+        filter={filter}
+        onFilterChange={setFilter}
+      />
+
+      {/* 2-column layout */}
+      <div className="flex flex-1 min-h-0">
+        {/* Left: layer list */}
+        <div className="w-80 shrink-0 border-r overflow-y-auto">
+          <LayerList
+            layers={image.layers}
+            selectedIndex={selectedLayer}
+            onSelect={setSelectedLayer}
+            viewMode={viewMode}
+          />
+        </div>
+
+        {/* Right: file browser */}
+        <div className="flex-1 overflow-y-auto">
+          <FilePanel
+            files={files}
+            fileViewMode={fileViewMode}
+            filter={filter}
+          />
         </div>
       </div>
     </div>
