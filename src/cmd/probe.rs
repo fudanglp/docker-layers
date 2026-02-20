@@ -2,7 +2,8 @@ use anyhow::Result;
 
 use crate::config;
 
-pub fn run() -> Result<()> {
+pub fn run(json: bool, runtime: Option<String>) -> Result<()> {
+    config::init_from_cli(json, runtime)?;
     let cfg = config::get();
 
     if cfg.json {

@@ -1,6 +1,8 @@
 use std::sync::OnceLock;
 
-use crate::probe::ProbeResult;
+use anyhow::Result;
+
+use crate::probe::{self, ProbeResult};
 
 static CONFIG: OnceLock<AppConfig> = OnceLock::new();
 
@@ -16,12 +18,20 @@ pub struct AppConfig {
     pub runtime_override: Option<String>,
 }
 
-/// Initialize the global config. Must be called once at startup.
-pub fn init(config: AppConfig) {
-    CONFIG.set(config).expect("config already initialized");
+/// Probe runtimes and initialize the global config.
+pub fn init_from_cli(json: bool, runtime_override: Option<String>) -> Result<()> {
+    let probe_result = probe::probe()?;
+    CONFIG
+        .set(AppConfig {
+            probe: probe_result,
+            json,
+            runtime_override,
+        })
+        .expect("config already initialized");
+    Ok(())
 }
 
 /// Get the global config. Panics if not initialized.
 pub fn get() -> &'static AppConfig {
-    CONFIG.get().expect("config not initialized — call config::init() first")
+    CONFIG.get().expect("config not initialized — call config::init_from_cli() first")
 }

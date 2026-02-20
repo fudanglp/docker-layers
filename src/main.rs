@@ -5,8 +5,6 @@ mod probe;
 use anyhow::Result;
 use clap::{Parser, Subcommand};
 
-use config::AppConfig;
-
 #[derive(Parser)]
 #[command(name = "peel")]
 #[command(about = "A container image layer inspection tool")]
@@ -46,14 +44,6 @@ enum Commands {
 fn main() -> Result<()> {
     let cli = Cli::parse();
 
-    // Probe runtimes and initialize global config
-    let probe_result = probe::probe()?;
-    config::init(AppConfig {
-        probe: probe_result,
-        json: cli.json,
-        runtime_override: cli.runtime,
-    });
-
     // Resolve: `peel <image>` is shorthand for `peel inspect <image>`
     let image_to_inspect = match &cli.command {
         Some(Commands::Inspect { image }) => Some(image.clone()),
@@ -67,9 +57,9 @@ fn main() -> Result<()> {
     }
 
     if let Some(image) = &image_to_inspect {
-        cmd::inspect::run(image, cli.use_oci)?;
+        cmd::inspect::run(image, cli.use_oci, cli.json, cli.runtime)?;
     } else if matches!(cli.command, Some(Commands::Probe)) {
-        cmd::probe::run()?;
+        cmd::probe::run(cli.json, cli.runtime)?;
     }
 
     Ok(())

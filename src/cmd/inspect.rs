@@ -6,7 +6,8 @@ use crossterm::style::{self, Stylize};
 use crate::config;
 use crate::probe::RuntimeInfo;
 
-pub fn run(image: &str, use_oci: bool) -> Result<()> {
+pub fn run(image: &str, use_oci: bool, json: bool, runtime: Option<String>) -> Result<()> {
+    config::init_from_cli(json, runtime)?;
     let cfg = config::get();
 
     // Check if we need root for direct storage access
