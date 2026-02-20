@@ -1,8 +1,11 @@
 mod config;
 mod probe;
 
+use std::io::{self, Write};
+
 use anyhow::Result;
 use clap::{Parser, Subcommand};
+use crossterm::style::{self, Stylize};
 
 use config::AppConfig;
 
@@ -18,6 +21,10 @@ struct Cli {
     /// Output as JSON
     #[arg(long, global = true)]
     json: bool,
+
+    /// Use OCI/Docker API instead of direct storage access (no root needed, slower)
+    #[arg(long, global = true)]
+    use_oci: bool,
 
     #[command(subcommand)]
     command: Commands,
@@ -35,6 +42,56 @@ enum Commands {
     Probe,
 }
 
+/// Re-execute the current process under sudo.
+fn escalate_with_sudo() -> Result<()> {
+    let exe = std::env::current_exe()?;
+    let args: Vec<String> = std::env::args().skip(1).collect();
+    let status = std::process::Command::new("sudo")
+        .arg(exe)
+        .args(&args)
+        .status()?;
+    std::process::exit(status.code().unwrap_or(1));
+}
+
+/// Prompt the user to re-run with sudo if direct storage access requires root.
+/// Returns true if the caller should continue without sudo (--use-oci fallback).
+fn maybe_escalate(rt: &probe::RuntimeInfo) -> Result<bool> {
+    let mut stderr = io::stderr();
+    write!(
+        stderr,
+        "{} Direct layer access reads from {} which is owned by root.\n",
+        "!".yellow().bold(),
+        style::style(rt.storage_root.display()).bold()
+    )?;
+    write!(
+        stderr,
+        "  peel needs to re-run with {} to read layers directly.\n\n",
+        "sudo".bold()
+    )?;
+    write!(
+        stderr,
+        "  Alternatively, run with {} to read layers through the {} API\n",
+        "--use-oci".green().bold(),
+        rt.kind
+    )?;
+    write!(stderr, "  (no root needed, but slower).\n\n")?;
+    write!(stderr, "Re-run with sudo? {} ", "[Y/n]".dim())?;
+    stderr.flush()?;
+
+    let mut answer = String::new();
+    io::stdin().read_line(&mut answer)?;
+    let answer = answer.trim().to_lowercase();
+
+    if answer.is_empty() || answer == "y" || answer == "yes" {
+        escalate_with_sudo()?;
+    }
+
+    // User declined sudo — bail out
+    anyhow::bail!(
+        "Cannot read storage without root. Re-run with sudo or use --use-oci."
+    );
+}
+
 fn main() -> Result<()> {
     let cli = Cli::parse();
 
@@ -49,6 +106,17 @@ fn main() -> Result<()> {
     match &cli.command {
         Commands::Inspect { image } => {
             let cfg = config::get();
+
+            // Check if we need root for direct storage access
+            if !cli.use_oci {
+                if let Some(idx) = cfg.probe.default {
+                    let rt = &cfg.probe.runtimes[idx];
+                    if !rt.can_read {
+                        maybe_escalate(rt)?;
+                    }
+                }
+            }
+
             if cfg.json {
                 println!("{{\"image\": \"{image}\", \"layers\": []}}");
             } else {
