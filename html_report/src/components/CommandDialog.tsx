@@ -21,6 +21,10 @@ export function CommandDialog({
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") onClose();
+      if (e.key === "Tab") {
+        e.preventDefault();
+        setView((v) => (v === "pretty" ? "original" : "pretty"));
+      }
     }
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
@@ -34,6 +38,7 @@ export function CommandDialog({
 
   return (
     <div
+      role="dialog"
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
       onClick={onClose}
     >

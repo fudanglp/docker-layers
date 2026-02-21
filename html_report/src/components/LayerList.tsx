@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, type RefObject } from "react";
 import { Layers, Terminal } from "lucide-react";
 import type { LayerInfo } from "@/types";
 import type { ViewMode } from "./Toolbar";
@@ -6,21 +6,56 @@ import { formatBytes } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { CommandDialog } from "./CommandDialog";
 
+const focusRing = "focus:outline-none focus:bg-primary/10";
+
 export function LayerList({
   layers,
   selectedIndex,
   onSelect,
   viewMode,
+  sectionRef,
 }: {
   layers: LayerInfo[];
   selectedIndex: number;
   onSelect: (i: number) => void;
   viewMode: ViewMode;
+  sectionRef: RefObject<HTMLDivElement | null>;
 }) {
   const [commandLayer, setCommandLayer] = useState<number | null>(null);
 
+  // Scroll selected layer into view on keyboard nav
+  useEffect(() => {
+    const el = sectionRef.current?.querySelector(
+      `[data-layer-index="${selectedIndex}"]`
+    );
+    el?.scrollIntoView({ block: "nearest" });
+  }, [selectedIndex, sectionRef]);
+
+  function handleKeyDown(e: React.KeyboardEvent) {
+    // Don't navigate while dialog is open
+    if (commandLayer !== null) return;
+
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      onSelect(Math.min(selectedIndex + 1, layers.length - 1));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      onSelect(Math.max(selectedIndex - 1, 0));
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      if (layers[selectedIndex].created_by) {
+        setCommandLayer(selectedIndex);
+      }
+    }
+  }
+
   return (
-    <div className="py-1">
+    <div
+      ref={sectionRef}
+      tabIndex={-1}
+      className={cn("py-1 h-full overflow-y-auto", focusRing)}
+      onKeyDown={handleKeyDown}
+    >
       {layers.map((layer, i) => {
         const selected = i === selectedIndex;
         // In accumulated mode, highlight all layers up to selected
@@ -29,6 +64,8 @@ export function LayerList({
         return (
           <button
             key={layer.digest}
+            data-layer-index={i}
+            tabIndex={-1}
             className={cn(
               "w-full text-left px-3 py-2 flex items-start gap-2 transition-colors",
               selected
@@ -69,18 +106,12 @@ export function LayerList({
                   </p>
                   <span
                     role="button"
-                    tabIndex={0}
+                    tabIndex={-1}
                     className="shrink-0 p-0.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
                     title="View full command"
                     onClick={(e) => {
                       e.stopPropagation();
                       setCommandLayer(i);
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        e.stopPropagation();
-                        setCommandLayer(i);
-                      }
                     }}
                   >
                     <Terminal className="size-3" />

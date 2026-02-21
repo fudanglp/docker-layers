@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { Container, Cpu } from "lucide-react";
 import data from "../data/test.json";
 import type { ImageInfo, FileEntry } from "@/types";
@@ -6,6 +6,7 @@ import { formatBytes } from "@/lib/format";
 import { LayerList } from "@/components/LayerList";
 import { FilePanel } from "@/components/FilePanel";
 import { Toolbar, type ViewMode, type FileViewMode } from "@/components/Toolbar";
+import { useSectionFocus } from "@/hooks/useSectionFocus";
 
 const image = data as ImageInfo;
 
@@ -14,6 +15,20 @@ function App() {
   const [viewMode, setViewMode] = useState<ViewMode>("layer");
   const [fileViewMode, setFileViewMode] = useState<FileViewMode>("tree");
   const [filter, setFilter] = useState("");
+
+  const toolbarRef = useRef<HTMLDivElement>(null);
+  const layerRef = useRef<HTMLDivElement>(null);
+  const treeRef = useRef<HTMLDivElement>(null);
+  const fileRef = useRef<HTMLDivElement>(null);
+
+  const sectionRefs = useMemo(() => {
+    const refs = [toolbarRef, layerRef];
+    if (fileViewMode === "tree") refs.push(treeRef);
+    refs.push(fileRef);
+    return refs;
+  }, [fileViewMode]);
+
+  useSectionFocus(sectionRefs);
 
   const files = useMemo<FileEntry[]>(() => {
     if (viewMode === "layer") {
@@ -60,17 +75,19 @@ function App() {
         onFileViewModeChange={setFileViewMode}
         filter={filter}
         onFilterChange={setFilter}
+        sectionRef={toolbarRef}
       />
 
       {/* 2-column layout */}
       <div className="flex flex-1 min-h-0">
         {/* Left: layer list */}
-        <div className="w-80 shrink-0 border-r overflow-y-auto">
+        <div className="w-80 shrink-0 border-r">
           <LayerList
             layers={image.layers}
             selectedIndex={selectedLayer}
             onSelect={setSelectedLayer}
             viewMode={viewMode}
+            sectionRef={layerRef}
           />
         </div>
 
@@ -80,6 +97,8 @@ function App() {
             files={files}
             fileViewMode={fileViewMode}
             filter={filter}
+            treeRef={treeRef}
+            fileRef={fileRef}
           />
         </div>
       </div>

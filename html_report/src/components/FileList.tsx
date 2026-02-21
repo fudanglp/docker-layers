@@ -1,9 +1,11 @@
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo, useRef, useCallback, useEffect, type RefObject } from "react";
 import { File, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
 import { formatBytes } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { usePagination } from "@/hooks/usePagination";
 import { Pagination } from "./Pagination";
+
+const focusRing = "focus:outline-none focus:bg-primary/10";
 
 export interface FileListItem {
   name: string;
@@ -28,14 +30,17 @@ export function FileList({
   defaultSortKey = "size",
   defaultSortDir = "desc",
   emptyMessage = "No files",
+  sectionRef,
 }: {
   items: FileListItem[];
   defaultSortKey?: SortKey;
   defaultSortDir?: SortDir;
   emptyMessage?: string;
+  sectionRef?: RefObject<HTMLDivElement | null>;
 }) {
   const [sortKey, setSortKey] = useState<SortKey>(defaultSortKey);
   const [sortDir, setSortDir] = useState<SortDir>(defaultSortDir);
+  const [selectedIndex, setSelectedIndex] = useState(-1);
 
   const sorted = useMemo(() => {
     const copy = [...items];
@@ -53,12 +58,26 @@ export function FileList({
   );
 
   const containerRef = useRef<HTMLDivElement>(null);
+  const mergedRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      (containerRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
+      if (sectionRef) {
+        (sectionRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
+      }
+    },
+    [sectionRef]
+  );
   const { pageItems, page, totalPages, setPage } = usePagination(
     sorted,
     containerRef,
     24,
     36
   );
+
+  // Reset selection on page or items change
+  useEffect(() => {
+    setSelectedIndex(-1);
+  }, [page, items]);
 
   function toggleSort(key: SortKey) {
     if (sortKey === key) {
@@ -69,11 +88,46 @@ export function FileList({
     }
   }
 
+  function handleKeyDown(e: React.KeyboardEvent) {
+    switch (e.key) {
+      case "ArrowDown":
+        e.preventDefault();
+        setSelectedIndex((i) => Math.min(i + 1, pageItems.length - 1));
+        break;
+      case "ArrowUp":
+        e.preventDefault();
+        setSelectedIndex((i) => Math.max(i - 1, 0));
+        break;
+      case "ArrowRight":
+        e.preventDefault();
+        if (page < totalPages - 1) setPage(page + 1);
+        break;
+      case "ArrowLeft":
+        e.preventDefault();
+        if (page > 0) setPage(page - 1);
+        break;
+      case "Home":
+        e.preventDefault();
+        setPage(0);
+        break;
+      case "End":
+        e.preventDefault();
+        setPage(totalPages - 1);
+        break;
+    }
+  }
+
   return (
-    <div className="flex flex-col h-full" ref={containerRef}>
+    <div
+      className={cn("flex flex-col h-full", sectionRef && focusRing)}
+      ref={mergedRef}
+      tabIndex={sectionRef ? -1 : undefined}
+      onKeyDown={handleKeyDown}
+    >
       {/* Sort header */}
       <div className="flex items-center border-b bg-background px-3 py-1.5 text-sm font-medium shrink-0">
         <button
+          tabIndex={-1}
           className="flex items-center gap-1 hover:text-foreground text-muted-foreground transition-colors"
           onClick={() => toggleSort("name")}
         >
@@ -81,6 +135,7 @@ export function FileList({
           <SortIcon active={sortKey === "name"} dir={sortDir} />
         </button>
         <button
+          tabIndex={-1}
           className="flex items-center gap-1 ml-auto hover:text-foreground text-muted-foreground transition-colors"
           onClick={() => toggleSort("size")}
         >
@@ -104,7 +159,10 @@ export function FileList({
             return (
               <div
                 key={`${file.name}-${page}-${i}`}
-                className="flex items-center gap-2 py-0.5 px-2 text-sm hover:bg-muted/50 rounded relative"
+                className={cn(
+                  "flex items-center gap-2 py-0.5 px-2 text-sm rounded relative",
+                  i === selectedIndex ? "bg-primary/10" : "hover:bg-muted/50"
+                )}
               >
                 <div
                   className="absolute inset-y-0 left-0 bg-primary/5 rounded"

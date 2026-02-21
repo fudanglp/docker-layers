@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, type RefObject } from "react";
 import type { FileEntry } from "@/types";
 import type { FileViewMode } from "./Toolbar";
 import { FileTreeSplit } from "./FileTreeSplit";
@@ -8,10 +8,14 @@ export function FilePanel({
   files,
   fileViewMode,
   filter,
+  treeRef,
+  fileRef,
 }: {
   files: FileEntry[];
   fileViewMode: FileViewMode;
   filter: string;
+  treeRef: RefObject<HTMLDivElement | null>;
+  fileRef: RefObject<HTMLDivElement | null>;
 }) {
   const filtered = useMemo(() => {
     if (!filter) return files;
@@ -28,7 +32,7 @@ export function FilePanel({
   }
 
   if (fileViewMode === "tree") {
-    return <FileTreeSplit files={filtered} />;
+    return <FileTreeSplit files={filtered} treeRef={treeRef} fileRef={fileRef} />;
   }
 
   const items = filtered.map((f) => ({
@@ -37,5 +41,5 @@ export function FilePanel({
     is_whiteout: f.is_whiteout,
   }));
 
-  return <FileList items={items} />;
+  return <FileList items={items} sectionRef={fileRef} />;
 }
