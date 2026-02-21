@@ -3,7 +3,7 @@ name = "peel"
 version = "0.1.0"
 edition = "2024"
 description = "A container image layer inspection tool"
-repository = "https://github.com/fudanglp/docker-layers"
+repository = "https://github.com/fudanglp/peel"
 
 [[bin]]
 name = "peel"

@@ -7,5 +7,5 @@ Peel apart your container images — inspect layers, list files, and export to J
 ## Install
 
 ```sh
-curl --proto '=https' --tlsv1.2 -LsSf https://github.com/fudanglp/docker-layers/releases/latest/download/peel-installer.sh | sh
+curl --proto '=https' --tlsv1.2 -LsSf https://github.com/fudanglp/peel/releases/latest/download/peel-installer.sh | sh
 ```
