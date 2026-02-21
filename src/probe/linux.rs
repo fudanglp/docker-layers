@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use anyhow::Result;
 
 use super::common::{check_daemon, check_read_access, command_output, find_binary};
-use super::{ProbeResult, RuntimeInfo, RuntimeKind, StorageDriver};
+use super::{ProbeResult, RuntimeInfo, RuntimeKind, StorageDriver, RUNTIME_PREFERENCE};
 
 pub fn probe() -> Result<ProbeResult> {
     let mut runtimes = Vec::new();
@@ -18,12 +18,10 @@ pub fn probe() -> Result<ProbeResult> {
         runtimes.push(info);
     }
 
-    // Default priority: Docker > Podman > containerd
-    let default = if runtimes.is_empty() {
-        None
-    } else {
-        Some(0)
-    };
+    // Pick the default based on RUNTIME_PREFERENCE order
+    let default = RUNTIME_PREFERENCE.iter().find_map(|preferred| {
+        runtimes.iter().position(|rt| rt.kind.matches(preferred))
+    });
 
     Ok(ProbeResult { runtimes, default })
 }

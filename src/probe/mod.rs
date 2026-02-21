@@ -32,6 +32,30 @@ impl fmt::Display for RuntimeKind {
     }
 }
 
+/// Default preference order when multiple runtimes are detected.
+/// The first match wins. Override with `--runtime`.
+pub const RUNTIME_PREFERENCE: &[RuntimeKind] = &[
+    RuntimeKind::Docker,
+    RuntimeKind::Podman,
+    RuntimeKind::Containerd,
+];
+
+impl RuntimeKind {
+    /// Match a user-supplied string (case-insensitive) to a RuntimeKind.
+    pub fn from_name(s: &str) -> Option<RuntimeKind> {
+        match s.to_lowercase().as_str() {
+            "docker" => Some(RuntimeKind::Docker),
+            "podman" => Some(RuntimeKind::Podman),
+            "containerd" | "ctr" => Some(RuntimeKind::Containerd),
+            _ => None,
+        }
+    }
+
+    pub fn matches(&self, other: &RuntimeKind) -> bool {
+        std::mem::discriminant(self) == std::mem::discriminant(other)
+    }
+}
+
 #[derive(Debug, Clone, Serialize)]
 pub enum StorageDriver {
     Overlay2,
