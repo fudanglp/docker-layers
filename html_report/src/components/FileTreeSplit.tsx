@@ -4,17 +4,12 @@ import {
   Folder,
   ChevronsDownUp,
   ChevronsUpDown,
-  ArrowUp,
-  ArrowDown,
-  ArrowUpDown,
 } from "lucide-react";
 import type { FileEntry, TreeNode } from "@/types";
 import { formatBytes } from "@/lib/format";
 import { buildTree } from "@/lib/tree";
 import { cn } from "@/lib/utils";
-
-type SortKey = "name" | "size";
-type SortDir = "asc" | "desc";
+import { FileList } from "./FileList";
 
 function sortedDirChildren(node: TreeNode): TreeNode[] {
   return [...node.children.values()]
@@ -80,21 +75,10 @@ function DirTreeNode({
   );
 }
 
-function SortIcon({ active, dir }: { active: boolean; dir: SortDir }) {
-  if (!active) return <ArrowUpDown className="size-3.5" />;
-  return dir === "asc" ? (
-    <ArrowUp className="size-3.5" />
-  ) : (
-    <ArrowDown className="size-3.5" />
-  );
-}
-
 export function FileTreeSplit({ files }: { files: FileEntry[] }) {
   const [expandAll, setExpandAll] = useState(false);
   const [revision, setRevision] = useState(0);
   const [selectedDir, setSelectedDir] = useState<TreeNode | null>(null);
-  const [sortKey, setSortKey] = useState<SortKey>("name");
-  const [sortDir, setSortDir] = useState<SortDir>("asc");
 
   const tree = useMemo(() => buildTree(files), [files]);
 
@@ -105,26 +89,10 @@ export function FileTreeSplit({ files }: { files: FileEntry[] }) {
 
   const activeDir = selectedDir ?? tree;
 
-  const fileChildren = useMemo(() => {
-    const items = [...activeDir.children.values()].filter((c) => c.isFile);
-    items.sort((a, b) => {
-      const cmp =
-        sortKey === "name"
-          ? a.name.localeCompare(b.name)
-          : a.size - b.size;
-      return sortDir === "asc" ? cmp : -cmp;
-    });
-    return items;
-  }, [activeDir, sortKey, sortDir]);
-
-  function toggleSort(key: SortKey) {
-    if (sortKey === key) {
-      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-    } else {
-      setSortKey(key);
-      setSortDir("asc");
-    }
-  }
+  const fileChildren = useMemo(
+    () => [...activeDir.children.values()].filter((c) => c.isFile),
+    [activeDir]
+  );
 
   return (
     <div className="flex h-full">
@@ -182,69 +150,13 @@ export function FileTreeSplit({ files }: { files: FileEntry[] }) {
       </div>
 
       {/* Right pane: file list */}
-      <div className="flex-1 overflow-auto">
-        <table className="w-full text-sm">
-          <thead className="sticky top-0 bg-background border-b">
-            <tr>
-              <th className="text-left px-3 py-1.5 font-medium">
-                <button
-                  className="flex items-center gap-1 hover:text-foreground text-muted-foreground transition-colors"
-                  onClick={() => toggleSort("name")}
-                >
-                  Name
-                  <SortIcon active={sortKey === "name"} dir={sortDir} />
-                </button>
-              </th>
-              <th className="text-right px-3 py-1.5 font-medium w-24">
-                <button
-                  className="flex items-center gap-1 ml-auto hover:text-foreground text-muted-foreground transition-colors"
-                  onClick={() => toggleSort("size")}
-                >
-                  Size
-                  <SortIcon active={sortKey === "size"} dir={sortDir} />
-                </button>
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {fileChildren.length === 0 ? (
-              <tr>
-                <td
-                  colSpan={2}
-                  className="text-center text-muted-foreground py-8"
-                >
-                  No files in this directory
-                </td>
-              </tr>
-            ) : (
-              fileChildren.map((f) => {
-                const displayName = f.is_whiteout
-                  ? f.name.replace(/^\.wh\./, "")
-                  : f.name;
-                return (
-                  <tr
-                    key={f.name}
-                    className="hover:bg-muted/50 border-b border-border/50"
-                  >
-                    <td className="px-3 py-1">
-                      <span
-                        className={cn(
-                          f.is_whiteout && "line-through text-red-500"
-                        )}
-                      >
-                        {displayName}
-                        {f.is_whiteout && " (deleted)"}
-                      </span>
-                    </td>
-                    <td className="text-right px-3 py-1 text-muted-foreground">
-                      {formatBytes(f.size)}
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
+      <div className="flex-1 overflow-hidden">
+        <FileList
+          items={fileChildren}
+          defaultSortKey="name"
+          defaultSortDir="asc"
+          emptyMessage="No files in this directory"
+        />
       </div>
     </div>
   );

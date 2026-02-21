@@ -65,7 +65,7 @@ export function Toolbar({
         onChange={onFileViewModeChange}
         options={[
           { value: "tree", label: "Tree", icon: <FolderTree className="size-3.5" /> },
-          { value: "size", label: "By Size", icon: <ArrowDownWideNarrow className="size-3.5" /> },
+          { value: "size", label: "Files", icon: <ArrowDownWideNarrow className="size-3.5" /> },
         ]}
       />
 

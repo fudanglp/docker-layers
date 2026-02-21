@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import type { FileEntry } from "@/types";
 import type { FileViewMode } from "./Toolbar";
 import { FileTreeSplit } from "./FileTreeSplit";
-import { FileSizeList } from "./FileSizeList";
+import { FileList } from "./FileList";
 
 export function FilePanel({
   files,
@@ -31,5 +31,11 @@ export function FilePanel({
     return <FileTreeSplit files={filtered} />;
   }
 
-  return <FileSizeList files={filtered} />;
+  const items = filtered.map((f) => ({
+    name: f.path,
+    size: f.size,
+    is_whiteout: f.is_whiteout,
+  }));
+
+  return <FileList items={items} />;
 }
