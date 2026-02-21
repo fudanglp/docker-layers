@@ -1,8 +1,10 @@
-import { Layers } from "lucide-react";
+import { useState } from "react";
+import { Layers, Terminal } from "lucide-react";
 import type { LayerInfo } from "@/types";
 import type { ViewMode } from "./Toolbar";
 import { formatBytes } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { CommandDialog } from "./CommandDialog";
 
 export function LayerList({
   layers,
@@ -15,6 +17,8 @@ export function LayerList({
   onSelect: (i: number) => void;
   viewMode: ViewMode;
 }) {
+  const [commandLayer, setCommandLayer] = useState<number | null>(null);
+
   return (
     <div className="py-1">
       {layers.map((layer, i) => {
@@ -59,14 +63,42 @@ export function LayerList({
                 </span>
               </div>
               {layer.created_by && (
-                <p className="text-[10px] text-muted-foreground font-mono truncate mt-0.5 leading-tight">
-                  {layer.created_by}
-                </p>
+                <div className="flex items-center gap-1 mt-0.5">
+                  <p className="text-[10px] text-muted-foreground font-mono truncate leading-tight flex-1 min-w-0">
+                    {layer.created_by}
+                  </p>
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    className="shrink-0 p-0.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                    title="View full command"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setCommandLayer(i);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.stopPropagation();
+                        setCommandLayer(i);
+                      }
+                    }}
+                  >
+                    <Terminal className="size-3" />
+                  </span>
+                </div>
               )}
             </div>
           </button>
         );
       })}
+
+      {commandLayer !== null && layers[commandLayer].created_by && (
+        <CommandDialog
+          command={layers[commandLayer].created_by!}
+          layerIndex={commandLayer}
+          onClose={() => setCommandLayer(null)}
+        />
+      )}
     </div>
   );
 }
