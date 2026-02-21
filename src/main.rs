@@ -24,6 +24,10 @@ struct Cli {
     #[arg(long, global = true)]
     use_oci: bool,
 
+    /// Open an interactive report in the browser
+    #[arg(long, global = true)]
+    web: bool,
+
     #[command(subcommand)]
     command: Option<Commands>,
 
@@ -59,7 +63,7 @@ fn main() -> Result<()> {
     }
 
     if let Some(image) = &image_to_inspect {
-        cmd::inspect::run(image, cli.use_oci, cli.json.as_deref(), cli.runtime)?;
+        cmd::inspect::run(image, cli.use_oci, cli.json.as_deref(), cli.runtime, cli.web)?;
     } else if matches!(cli.command, Some(Commands::Probe)) {
         cmd::probe::run(cli.json.is_some(), cli.runtime)?;
     }

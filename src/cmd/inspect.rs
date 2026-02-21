@@ -10,7 +10,7 @@ use crate::inspector::{self, Inspector};
 use crate::probe::{RuntimeInfo, StorageDriver};
 use crate::progress::Spinner;
 
-pub fn run(image: &str, use_oci: bool, json: Option<&str>, runtime: Option<String>) -> Result<()> {
+pub fn run(image: &str, use_oci: bool, json: Option<&str>, runtime: Option<String>, web: bool) -> Result<()> {
     config::init_from_cli(json.is_some(), runtime)?;
     let cfg = config::get();
 
@@ -64,6 +64,41 @@ pub fn run(image: &str, use_oci: bool, json: Option<&str>, runtime: Option<Strin
         layer.files = inspector.list_files(layer)?;
     }
     spinner.finish(format!("Inspected {} layers", num_layers));
+
+    if web {
+        let json_str = serde_json::to_string_pretty(&info)?;
+        let safe_name = info
+            .name
+            .replace(|c: char| !c.is_alphanumeric() && c != '-', "_");
+        let salt: u16 = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| (d.as_millis() % 10000) as u16)
+            .unwrap_or(0);
+        let tmp = std::env::temp_dir();
+        let json_path = tmp.join(format!("peel-{safe_name}-{salt}.json"));
+        let html_path = tmp.join(format!("peel-{safe_name}-{salt}.html"));
+
+        fs::write(&json_path, &json_str)
+            .with_context(|| format!("Failed to write JSON to {}", json_path.display()))?;
+        eprintln!(
+            "{} Wrote {} ({})",
+            "✔".green(),
+            style::style(json_path.display()).cyan(),
+            format_bytes(json_str.len() as u64)
+        );
+
+        let html = super::report::build_report(&json_str);
+        fs::write(&html_path, &html)
+            .with_context(|| format!("Failed to write HTML to {}", html_path.display()))?;
+        eprintln!(
+            "{} Wrote {} ({})",
+            "✔".green(),
+            style::style(html_path.display()).cyan(),
+            format_bytes(html.len() as u64)
+        );
+
+        return super::report::serve(&html);
+    }
 
     if let Some(dest) = json {
         let output = serde_json::to_string_pretty(&info)?;
@@ -128,6 +163,22 @@ fn print_runtime_summary(cfg: &config::AppConfig) {
     }
 
     let _ = writeln!(stderr);
+}
+
+fn format_bytes(bytes: u64) -> String {
+    const UNITS: &[&str] = &["B", "KB", "MB", "GB"];
+    let mut size = bytes as f64;
+    for unit in UNITS {
+        if size < 1024.0 {
+            return if size.fract() < 0.05 {
+                format!("{:.0} {unit}", size)
+            } else {
+                format!("{:.1} {unit}", size)
+            };
+        }
+        size /= 1024.0;
+    }
+    format!("{:.1} TB", size)
 }
 
 fn looks_like_archive(image: &str) -> bool {

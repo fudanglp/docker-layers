@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef } from "react";
 import { Container, Cpu } from "lucide-react";
-import data from "../data/test.json";
+import devData from "../data/test.json";
 import type { ImageInfo, FileEntry } from "@/types";
 import { formatBytes } from "@/lib/format";
 import { LayerList } from "@/components/LayerList";
@@ -8,7 +8,13 @@ import { FilePanel } from "@/components/FilePanel";
 import { Toolbar, type ViewMode, type FileViewMode } from "@/components/Toolbar";
 import { useSectionFocus } from "@/hooks/useSectionFocus";
 
-const image = data as ImageInfo;
+function loadData(): ImageInfo {
+  const el = document.getElementById("__PEEL_DATA__");
+  if (el?.textContent?.trim()) return JSON.parse(el.textContent);
+  return devData as ImageInfo;
+}
+
+const image = loadData();
 
 function App() {
   const [selectedLayer, setSelectedLayer] = useState(0);
