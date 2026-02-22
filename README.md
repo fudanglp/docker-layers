@@ -1,4 +1,8 @@
-# peel
+<p align="center">
+  <img src="assets/peel_icon.svg" width="256" height="256" alt="peel logo">
+</p>
+
+---
 
 A CLI/TUI tool for inspecting container image layers, written in Rust.
 
